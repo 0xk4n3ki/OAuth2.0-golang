@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"os"
 
 	"golang.org/x/oauth2"
@@ -14,6 +15,7 @@ type Config struct {
 var AppConfig Config
 
 func InitGoogleConfig() oauth2.Config {
+	fmt.Printf("id: %s, sec: %s\n", os.Getenv("GOOGLE_CLIENT_ID"), os.Getenv("GOOGLE_CLIENT_SECRET"))
 	AppConfig.GoogleLoginConfig = oauth2.Config{
 		RedirectURL:  "http://localhost:9000/google_callback",
 		ClientID:     os.Getenv("GOOGLE_CLIENT_ID"),

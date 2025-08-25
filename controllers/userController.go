@@ -13,6 +13,7 @@ import (
 	"github.com/0xk4n3ki/OAuth2.0-golang/models"
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
+	"github.com/google/uuid"
 )
 
 var Validate = validator.New()
@@ -53,7 +54,7 @@ func GetUsers() gin.HandlerFunc {
 		}
 
 		rows, err := database.PG_Client.Query(`
-			SELECT user_id, first_name, last_name, email, token, refreshToken, created_at, updated_at
+			SELECT user_id, first_name, last_name, email, token, refresh_token, created_at, updated_at
 			FROM users
 			ORDER BY created_at DESC
 			LIMIT $1 OFFSET $2
@@ -93,7 +94,11 @@ func GetUsers() gin.HandlerFunc {
 func GetUser() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		var user models.User
-		userId := ctx.Query("user_id")
+		userId := ctx.Param("user_id")
+		if _, err := uuid.Parse(userId); err != nil {
+			ctx.JSON(http.StatusBadRequest, gin.H{"error":"invalid user_id format"})
+			return 
+		}
 
 		err := database.PG_Client.QueryRow(`
 			SELECT user_id, first_name, last_name, email, token, refresh_token, created_at, updated_at
@@ -110,9 +115,13 @@ func GetUser() gin.HandlerFunc {
 		)
 		if err == sql.ErrNoRows {
 			ctx.JSON(http.StatusNotFound, gin.H{"error": "user not found"})
+			return
 		}
 		if err != nil {
-			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Error fetching user"})
+			ctx.JSON(http.StatusInternalServerError, gin.H{
+				"error":   "Error fetching user",
+				"details": err.Error(),
+			})
 			return
 		}
 
@@ -128,6 +137,7 @@ func GoogleCallback() gin.HandlerFunc {
 		token, err := config.AppConfig.GoogleLoginConfig.Exchange(ctx.Request.Context(), code)
 		if err != nil {
 			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Code-Token exchange failed"})
+			return
 		}
 
 		resp, err := http.Get("https://www.googleapis.com/oauth2/v2/userinfo?access_token=" + token.AccessToken)
@@ -152,6 +162,7 @@ func GoogleCallback() gin.HandlerFunc {
 		err = Validate.Struct(&user)
 		if err != nil {
 			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "missing data returned by google"})
+			return
 		}
 
 		switch state {

@@ -5,11 +5,19 @@ import (
 	"fmt"
 	"log"
 	"os"
+
+	"github.com/joho/godotenv"
+	_ "github.com/lib/pq"
 )
 
 var PG_Client *sql.DB = DBinstance()
 
 func DBinstance() *sql.DB {
+	err := godotenv.Load(".env")
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
+
 	username := os.Getenv("PGUSER")
 	if username == "" {
 		log.Fatal("Username not found")
@@ -20,12 +28,38 @@ func DBinstance() *sql.DB {
 		log.Fatal("Password not found")
 	}
 
-	PgDB := os.Getenv("PG_URL")
-	if PgDB == "" {
-		PgDB = "postgres://" + username + ":" + password + "@localhost:5432/go-oauth?sslmode=disable"
+	dbName := "go-oauth"
+
+	adminConnStr := os.Getenv("ADMIN_DB")
+	if adminConnStr == "" {
+		adminConnStr = fmt.Sprintf("postgres://%s:%s@localhost:5432/postgres?sslmode=disable", username, password)
+	}
+	adminDB, err := sql.Open("postgres", adminConnStr)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer adminDB.Close()
+
+	var exists bool
+	err = adminDB.QueryRow(`SELECT EXISTS(SELECT 1 FROM pg_database WHERE datname=$1)`, dbName).Scan(&exists)
+	if err != nil {
+		log.Fatal(err)
 	}
 
-	db, err := sql.Open("postgres", PgDB)
+	if !exists {
+		_, err = adminDB.Exec(fmt.Sprintf(`CREATE DATABASE "%s"`, dbName))
+		if err != nil {
+			log.Fatalf("Error creating database %s: %v", dbName, err)
+		}
+		fmt.Printf("Database %s created\n", dbName)
+	}
+
+	connStr := os.Getenv("PG_URL")
+	if connStr == "" {
+		connStr = fmt.Sprintf("postgres://%s:%s@localhost:5432/%s?sslmode=disable", username, password, dbName)
+	}
+
+	db, err := sql.Open("postgres", connStr)
 	if err != nil {
 		log.Fatal(err)
 	}
