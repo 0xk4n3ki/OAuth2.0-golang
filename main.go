@@ -31,4 +31,13 @@ func main() {
 
 	routes.AuthRoutes(router)
 	routes.UserRoutes(router)
+
+	router.GET("/api", func(ctx *gin.Context) {
+		ctx.JSON(http.StatusOK, gin.H{"success": "access granted for api"})
+	})
+
+	err = router.Run()
+	if err != nil {
+		log.Panic("Failed to run the router")
+	}
 }
