@@ -8,7 +8,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 
-	"github.com/OAuth2.0-golang/routes"
+	"github.com/0xk4n3ki/OAuth2.0-golang/config"
+	"github.com/0xk4n3ki/OAuth2.0-golang/routes"
 )
 
 func main() {
@@ -24,6 +25,8 @@ func main() {
 
 	router := gin.New()
 	router.Use(gin.Logger())
+
+	config.InitGoogleConfig()
 
 	router.GET("/healthz", func(ctx *gin.Context) {
 		ctx.JSON(http.StatusOK, gin.H{"status": "ok"})

@@ -1,11 +1,14 @@
 package routes
 
 import (
-	"github.com/OAuth2.0-golang/controllers"
+	"github.com/0xk4n3ki/OAuth2.0-golang/controllers"
 	"github.com/gin-gonic/gin"
 )
 
 func AuthRoutes(incomingRoutes *gin.Engine) {
-	incomingRoutes.POST("users/signup", controllers.Signup())
-	incomingRoutes.POST("users/login", controllers.Login())
+	incomingRoutes.GET("users/signup", controllers.Signup())
+	incomingRoutes.GET("users/login", controllers.Login())
+
+	incomingRoutes.GET("/google_callback", controllers.GoogleCallback())
+	incomingRoutes.POST("/users/refresh", controllers.RefreshToken())
 }

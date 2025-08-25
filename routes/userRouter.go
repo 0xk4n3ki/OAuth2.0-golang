@@ -1,8 +1,8 @@
 package routes
 
 import (
-	"github.com/OAuth2.0-golang/controllers"
-	"github.com/OAuth2.0-golang/middleware"
+	"github.com/0xk4n3ki/OAuth2.0-golang/controllers"
+	"github.com/0xk4n3ki/OAuth2.0-golang/middleware"
 	"github.com/gin-gonic/gin"
 )
 

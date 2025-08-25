@@ -36,3 +36,5 @@ func OpenCollection(client *mongo.Client, collectionName string) *mongo.Collecti
 	collection := client.Database("go-oauth").Collection(collectionName)
 	return collection
 }
+
+var UserCollection *mongo.Collection = OpenCollection(Client, "user")
