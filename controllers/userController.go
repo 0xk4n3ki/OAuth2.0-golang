@@ -1,11 +1,14 @@
 package controllers
 
 import (
+	"database/sql"
 	"encoding/json"
 	"io"
 	"net/http"
+	"strconv"
 
 	"github.com/0xk4n3ki/OAuth2.0-golang/config"
+	"github.com/0xk4n3ki/OAuth2.0-golang/database"
 	"github.com/0xk4n3ki/OAuth2.0-golang/helpers"
 	"github.com/0xk4n3ki/OAuth2.0-golang/models"
 	"github.com/gin-gonic/gin"
@@ -30,13 +33,90 @@ func Signup() gin.HandlerFunc {
 
 func GetUsers() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
+		recordPerPage, err := strconv.Atoi(ctx.Query("recordPerPage"))
+		if err != nil || recordPerPage <= 0 {
+			recordPerPage = 10
+		}
 
+		page, err := strconv.Atoi(ctx.Query("page"))
+		if err != nil || page < 1 {
+			page = 1
+		}
+
+		startIndex := (page - 1) * recordPerPage
+
+		var totalCount int
+		err = database.PG_Client.QueryRow(`SELECT COUNT(*) FROM users`).Scan(&totalCount)
+		if err != nil {
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "error counting users"})
+			return
+		}
+
+		rows, err := database.PG_Client.Query(`
+			SELECT user_id, first_name, last_name, email, token, refreshToken, created_at, updated_at
+			FROM users
+			ORDER BY created_at DESC
+			LIMIT $1 OFFSET $2
+		`, recordPerPage, startIndex)
+		if err != nil {
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "error fetching users"})
+			return
+		}
+		defer rows.Close()
+
+		var users []models.User
+		for rows.Next() {
+			var u models.User
+			if err := rows.Scan(
+				&u.User_id,
+				&u.First_name,
+				&u.Last_name,
+				&u.Email,
+				&u.Token,
+				&u.Refresh_token,
+				&u.Created_at,
+				&u.Updated_at,
+			); err != nil {
+				ctx.JSON(http.StatusInternalServerError, gin.H{"error": "error scanning users"})
+				return
+			}
+			users = append(users, u)
+		}
+
+		ctx.JSON(http.StatusOK, gin.H{
+			"total_count": totalCount,
+			"users":       users,
+		})
 	}
 }
 
 func GetUser() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
+		var user models.User
+		userId := ctx.Query("user_id")
 
+		err := database.PG_Client.QueryRow(`
+			SELECT user_id, first_name, last_name, email, token, refresh_token, created_at, updated_at
+			FROM users WHERE user_id=$1
+		`, userId).Scan(
+			&user.User_id,
+			&user.First_name,
+			&user.Last_name,
+			&user.Email,
+			&user.Token,
+			&user.Refresh_token,
+			&user.Created_at,
+			&user.Updated_at,
+		)
+		if err == sql.ErrNoRows {
+			ctx.JSON(http.StatusNotFound, gin.H{"error": "user not found"})
+		}
+		if err != nil {
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Error fetching user"})
+			return
+		}
+
+		ctx.JSON(http.StatusOK, user)
 	}
 }
 

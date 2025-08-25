@@ -65,9 +65,10 @@ func AddUser(ctx *gin.Context, gUser models.GoogleUser) {
 	}
 
 	ctx.JSON(http.StatusCreated, gin.H{
-		"user_id": user.User_id,
-		"email":   user.Email,
-		"token":   user.Token,
+		"user_id":       user.User_id,
+		"email":         user.Email,
+		"token":         user.Token,
+		"refresh_token": user.Refresh_token,
 	})
 }
 
