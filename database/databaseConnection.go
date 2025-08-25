@@ -1,40 +1,67 @@
 package database
 
 import (
-	"context"
+	"database/sql"
 	"fmt"
 	"log"
 	"os"
-	"time"
-
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-var Client *mongo.Client = DBinstance()
+var PG_Client *sql.DB = DBinstance()
 
-func DBinstance() *mongo.Client {
-	MongoDB := os.Getenv("MONGODB_URL")
-	if MongoDB == "" {
-		MongoDB = "mongodb://localhost:27017/go-oauth"
+func DBinstance() *sql.DB {
+	username := os.Getenv("PGUSER")
+	if username == "" {
+		log.Fatal("Username not found")
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
+	password := os.Getenv("PGPASSWORD")
+	if password == "" {
+		log.Fatal("Password not found")
+	}
 
-	client, err := mongo.Connect(ctx, options.Client().ApplyURI(MongoDB))
+	PgDB := os.Getenv("PG_URL")
+	if PgDB == "" {
+		PgDB = "postgres://" + username + ":" + password + "@localhost:5432/go-oauth?sslmode=disable"
+	}
+
+	db, err := sql.Open("postgres", PgDB)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	fmt.Println("Connected to MongoDB")
+	if err := db.Ping(); err != nil {
+		log.Fatal(err)
+	}
 
-	return client
+	fmt.Println("Connected to Postgresql")
+
+	return db
 }
 
-func OpenCollection(client *mongo.Client, collectionName string) *mongo.Collection {
-	collection := client.Database("go-oauth").Collection(collectionName)
-	return collection
+func CreateUserTable(db *sql.DB) {
+	query := `
+	CREATE TABLE IF NOT EXISTS users (
+		id SERIAL PRIMARY KEY,
+		first_name TEXT NOT NULL,
+		last_name TEXT NOT NULL,
+		email TEXT UNIQUE NOT NULL,
+		token TEXT,
+		refresh_token TEXT,
+		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+		updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+		user_id UUID DEFAULT gen_random_uuid()
+	);`
+
+	_, err := db.Exec(query)
+	if err != nil {
+		log.Fatalf("Error creating users table: %v", err)
+	}
 }
 
-var UserCollection *mongo.Collection = OpenCollection(Client, "user")
+func EnablePgCrypto(db *sql.DB) {
+	_, err := db.Exec(`CREATE EXTENSION IF NOT EXISTS pgcrypto;`)
+	if err != nil {
+		log.Fatalf("Error enabling pgcrypto extension: %v", err)
+	}
+}

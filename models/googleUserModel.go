@@ -8,5 +8,5 @@ type GoogleUser struct {
 	Given_name     string `json:"given_name"`
 	Family_name    string `json:"family_name"`
 	Picture        string `json:"picture"`
-	Location       string `json:"locale"`
+	Locale       string `json:"locale"`
 }

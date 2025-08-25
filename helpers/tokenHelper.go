@@ -1,14 +1,11 @@
 package helpers
 
 import (
-	"context"
 	"os"
 	"time"
 
 	"github.com/0xk4n3ki/OAuth2.0-golang/database"
 	jwt "github.com/dgrijalva/jwt-go"
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 type SignedDetails struct {
@@ -55,26 +52,14 @@ func GenerateAllTokens(email, firstName, lastName, uid string) (token, refreshTo
 }
 
 func UpdateAllTokens(token, refreshToken, uid string) error {
-	c, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
-	updateObj := bson.M{
-		"token":         token,
-		"refresh_token": refreshToken,
-		"updated_at":    time.Now().UTC(),
-	}
-
-	filter := bson.M{"user_id": uid}
-	upsert := true
-	opts := options.UpdateOptions{
-		Upsert: &upsert,
-	}
-
-	_, err := database.UserCollection.UpdateOne(
-		c,
-		filter,
-		bson.M{"$set": updateObj},
-		&opts,
+	_, err := database.PG_Client.Exec(`
+		UPDATE users 
+		SET token=$1, refresh_token=$2, updated_at=$3 
+		WHERE user_id=$4;
+		`, token,
+		refreshToken,
+		time.Now().UTC(),
+		uid,
 	)
 
 	return err

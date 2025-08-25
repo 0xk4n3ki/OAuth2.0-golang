@@ -1,23 +1,17 @@
 package controllers
 
 import (
-	"context"
 	"encoding/json"
 	"io"
 	"net/http"
-	"time"
 
 	"github.com/0xk4n3ki/OAuth2.0-golang/config"
-	"github.com/0xk4n3ki/OAuth2.0-golang/database"
 	"github.com/0xk4n3ki/OAuth2.0-golang/helpers"
 	"github.com/0xk4n3ki/OAuth2.0-golang/models"
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/mongo"
 )
 
-var UserCollection *mongo.Collection = database.OpenCollection(database.Client, "user")
 var Validate = validator.New()
 
 func Login() gin.HandlerFunc {
@@ -36,8 +30,6 @@ func Signup() gin.HandlerFunc {
 
 func GetUsers() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		c, cancel := context.WithTimeout(ctx.Request.Context(), 10*time.Second)
-		defer cancel()
 
 	}
 }
